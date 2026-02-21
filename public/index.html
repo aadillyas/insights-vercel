@@ -1530,7 +1530,7 @@
                 setIsTyping(true);
 
                 try {
-                    const systemContext = `You are an AI analyst embedded in a retail analytics dashboard called Insights+ for CoolPlanet Retail Network, a Sri Lankan fashion retail chain with 23 outlets and 68 POS systems. You are answering questions about the widget titled "${title}" in the "${category}" category. Here is the current data for this widget: ${JSON.stringify(chartData)}. Keep answers concise, specific to the data shown, and actionable. Use ₹ for currency references. Do not make up data not present in the context.`;
+                    const systemContext = `You are an AI analyst embedded in a retail analytics dashboard called Insights+ for CoolPlanet Retail Network, a Sri Lankan fashion retail chain with 23 outlets and 68 POS systems. You are answering questions about the widget titled "${title}" in the "${category}" category. Here is the current data for this widget: ${JSON.stringify(chartData)}. Keep answers concise, specific to the data shown, and actionable. Use LKR for currency references. Do not make up data not present in the context.`;
 
                     const res = await fetch('/api/chat', {
                         method: 'POST',
@@ -1735,52 +1735,49 @@
                 }
             };
 
-            const handleSend = () => {
+            const handleSend = async () => {
                 if (!input.trim()) return;
 
                 setMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: input }]);
+                const userQuery = input;
                 setInput('');
                 setIsTyping(true);
 
-                const query = input.toLowerCase();
-                let response = null;
+                const allData = {
+                    customerSegments: generateData.customerSegments(),
+                    customerRetention: generateData.customerRetention(),
+                    stockLevels: generateData.stockLevels(),
+                    inventoryTurnover: generateData.inventoryTurnover(),
+                    storeRevenue: generateData.storeRevenue(),
+                    storeFootfall: generateData.storeFootfall(),
+                    peakHours: generateData.peakHours(),
+                    loyaltyImpact: generateData.loyaltyImpact(),
+                    underperformingStores: generateData.underperformingStores()
+                };
 
-                if (query.includes('peak') || query.includes('hour') || query.includes('busy')) {
-                    response = demoResponses['peak hours'];
-                } else if (query.includes('loyalty') || query.includes('member')) {
-                    response = demoResponses['loyalty'];
-                } else if (query.includes('underperform') || query.includes('worst') || query.includes('struggling')) {
-                    response = demoResponses['underperforming'];
-                }
+                const systemContext = `You are an AI analyst for CoolPlanet Retail Network, a Sri Lankan fashion retail chain with 23 outlets and 68 POS systems processing 2.4M monthly transactions. You have access to the following live dashboard data: ${JSON.stringify(allData)}. Answer questions concisely and specifically using this data. Give actionable recommendations. Use LKR for currency. Do not say you cannot access data — it is all provided above.`;
 
-                if (response) {
-                    setTimeout(() => {
-                        setMessages(prev => [...prev, { id: Date.now(), sender: 'ai', text: response.step1 }]);
-                    }, 1000);
+                try {
+                    const res = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: userQuery, context: systemContext })
+                    });
 
-                    setTimeout(() => {
-                        setIsTyping(false);
-                        setMessages(prev => [...prev, {
-                            id: Date.now() + 1,
-                            sender: 'ai',
-                            text: response.step2,
-                            chart: {
-                                type: response.chartType,
-                                data: response.chartData,
-                                config: response.chartConfig,
-                                title: response.chartTitle
-                            }
-                        }]);
-                    }, 2500);
-                } else {
-                    setTimeout(() => {
-                        setIsTyping(false);
-                        setMessages(prev => [...prev, {
-                            id: Date.now(),
-                            sender: 'ai',
-                            text: "I can help you analyze: peak trading hours, loyalty program impact, or identify underperforming stores. Try asking one of those questions!"
-                        }]);
-                    }, 1500);
+                    const data = await res.json();
+                    setIsTyping(false);
+                    setMessages(prev => [...prev, {
+                        id: Date.now(),
+                        sender: 'ai',
+                        text: data.reply || 'Sorry, I could not generate a response. Please try again.'
+                    }]);
+                } catch (err) {
+                    setIsTyping(false);
+                    setMessages(prev => [...prev, {
+                        id: Date.now(),
+                        sender: 'ai',
+                        text: 'Connection error. Please try again.'
+                    }]);
                 }
             };
 

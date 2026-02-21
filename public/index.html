@@ -1602,9 +1602,13 @@
                                     <div className={`widget-message-avatar ${message.sender}`}>
                                         {message.sender === 'ai' ? <Icons.Bot /> : <Icons.User />}
                                     </div>
-                                    <div className={`widget-message-bubble ${message.sender}`}>
-                                        {message.text}
-                                    </div>
+                                    <div className={`widget-message-bubble ${message.sender}`}
+                                        dangerouslySetInnerHTML={{__html: message.text
+                                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                            .replace(/\n/g, '<br/>')
+                                        }}
+                                    />
                                 </div>
                             ))}
 
